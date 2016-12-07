@@ -1,0 +1,24 @@
+{
+  "name": "event_notifier",
+  "version": "0.0.1",
+  "description": "Given a message in the notification queue, send an alert via twilio to the configured number.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "azure": "1.2.0-preview",
+    "express": "4.14.x",
+    "twilio": "2.11.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jmspring/event_notifier.git"
+  },
+  "author": "Jim Spring",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jmspring/event_notifier/issues"
+  },
+  "homepage": "https://github.com/jmspring/event_notifier#readme"
+}
