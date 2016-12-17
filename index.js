@@ -50,9 +50,6 @@ function environment_vars() {
     'sendNotifications':          ((typeof(process.env.SEND_NOTIFICATIONS) != 'undefined') ? 
                                           parseInt(process.env.SEND_NOTIFICATIONS) : 0)
   };
-  if(typeof(env['sendNotifications']) != 'undefined') {
-    env['sendNotifications'] = parseInt()
-  }
   return env;
 }
 
