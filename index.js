@@ -46,8 +46,13 @@ function environment_vars() {
     'twilioSid':                  process.env.TWILIO_SID,
     'twilioAuthToken':            process.env.TWILIO_AUTH_TOKEN,
     'twilioNumber':               process.env.TWILIO_PHONE_NUMBER,
-    'notificationNumber':         process.env.NOTIFICATION_NUMBER
+    'notificationNumber':         process.env.NOTIFICATION_NUMBER,
+    'sendNotifications':          ((typeof(process.env.SEND_NOTIFICATIONS) != 'undefined') ? 
+                                          parseInt(process.env.SEND_NOTIFICATIONS) : 0)
   };
+  if(typeof(env['sendNotifications']) != 'undefined') {
+    env['sendNotifications'] = parseInt()
+  }
   return env;
 }
 
@@ -82,7 +87,6 @@ function timestamp() {
 }
 
 function send_notification(env, messages) {
-  console.log('lala 1');
   message_count = Object.keys(messages).length
   if(message_count > 0) {
     var now = timestamp();
@@ -98,59 +102,45 @@ function send_notification(env, messages) {
       console.log(e);
     }
 
-  console.log('lala 2');
-    var text = 'Alerts found: ' + message_count;
     if(last_time > 0) {
       text = text + ', Last alert: ' + last_message['timestamp'] + ', Value: ' + last_message['difference'];
     } else {
       text = text + ', Error processing last alert.';
     }
-  console.log('lala 3');
     
-    if(twilio) {
-      console.log(text);
-      /*
-      twilio.sms.messages.create({
-        to: env['notificationNumber'],
-        from: env['twilioNumber'],
-        body: text
-      }, function(error, message) {
-        if(error) {
-          stats['notifications']['errors']++;
-          stats['notifications']['last_error'] = error;
-          console.log(error);
-        } else {
-          stats['notifications']['sent']++;
-          stats['notifications']['last_sent'] = timestamp();
-          console.log('Message sent.  SID: ' + message.sid + ', time: ' + message.dateCreated);
-        }
+    if(env['sendNotifications'] == 1) {
+      if(twilio) {
+        twilio.sms.messages.create({
+          to: env['notificationNumber'],
+          from: env['twilioNumber'],
+          body: text
+        }, function(error, message) {
+          if(error) {
+            stats['notifications']['errors']++;
+            stats['notifications']['last_error'] = error;
+            console.log(error);
+          } else {
+            stats['notifications']['sent']++;
+            stats['notifications']['last_sent'] = timestamp();
+            console.log('Message sent.  SID: ' + message.sid + ', time: ' + message.dateCreated);
+          }
+          notifier_timer();
+        });
+      } else {
+        stats['notifications']['errors']++;
+        stats['notifications']['last_error'] = 'Twilio client undefined.';
         notifier_timer();
-      });
-        */
-      console.log('shoe 1');
-      notifier_timer();
+      }
     } else {
-  console.log('lala 4');
-      
-      stats['notifications']['errors']++;
-      stats['notifications']['last_error'] = 'Twilio client undefined.';
-      console.log('shoe 2');
-      notifier_timer();
+      console.log(text);
+      notifier_timer();    
     }
-  } else {
-  console.log('lala 5');
-    
-    stats['notifications']['errors']++;
-    stats['notifications']['last_error'] = 'No messages in notifier.';
-      console.log('shoe 3');
-    notifier_timer();    
   }
 }
 
 function terminate_check(env, messages) {
   var message_count = Object.keys(messages).length;
   if(message_count > 0) {
-    console.log('have messages - ' + message_count);
     send_notification(env, messages)
   } else {
     notifier_timer();
@@ -161,7 +151,6 @@ function check_for_messages(sbus_service, env, messages) {
   var terminate_interval = false;
   sbus_service.receiveQueueMessage(env['serviceBusQueue'], { isPeekLock: true, timeoutIntervalInS: 5 }, function(err, msg) {
     if(err) {
-      console.log(err);
       if(err == 'No messages to receive') {
         terminate_check(env, messages);
       } else {
@@ -177,12 +166,10 @@ function check_for_messages(sbus_service, env, messages) {
           try {
             if(body) {
               var message = JSON.parse(body)
-              console.log('ts - ' + message['timestamp'])
               messages[message.timestamp] = message
               stats['queue']['messages']++;
             }
           } catch(ex) {
-            console.log('error decoding message - ' + ex);
             stats['queue']['errors']++;
           }
         } else {
@@ -195,7 +182,6 @@ function check_for_messages(sbus_service, env, messages) {
 }
 
 function notifier_timer() {
-  console.log('notify timer');
   var env = environment_vars();
   var messages = null;
   if(required_environment_vars_set(env)) {
@@ -204,20 +190,15 @@ function notifier_timer() {
       twilio = require('twilio')(env['twilioSid'], env['twilioAuthToken']);
     }
 
-    console.log('messages - ' + messages)
     messages = {}
-    console.log('new messages -- ' + Object.keys(messages).length);
     var connection_string = "Endpoint=sb://" + env['serviceBusNamespace'] + 
                             ".servicebus.windows.net/;SharedAccessKeyName=" +
                             env['serviceBusSharedAccessName'] + 
                             ";SharedAccessKey=" + env['serviceBusSharedAccessKey'];
     var sbus_service = new azure.ServiceBusService(connection_string);
-    console.log("new timeout");
     setTimeout(check_for_messages.bind(null, sbus_service, env, messages), 25);
   } else {
-    console.log("POOPER");
     setTimeout(function() {
-              console.log('shoe 5');
         notifier_timer();
     }, 250);
   }
