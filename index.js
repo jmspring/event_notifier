@@ -102,6 +102,7 @@ function send_notification(env, messages) {
       console.log(e);
     }
 
+    var text = 'Alerts found: ' + message_count;
     if(last_time > 0) {
       text = text + ', Last alert: ' + last_message['timestamp'] + ', Value: ' + last_message['difference'];
     } else {
